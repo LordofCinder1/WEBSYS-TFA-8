@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HandlesAvatar;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,6 +12,8 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
+    use HandlesAvatar;
+
     /**
      * Display the user's profile form.
      */
@@ -51,6 +54,7 @@ class ProfileController extends Controller
         Auth::logout();
 
         $user->delete();
+        $this->deleteAvatar($user->avatar);
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

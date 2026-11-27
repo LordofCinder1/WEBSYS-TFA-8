@@ -1,58 +1,163 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# TFA8: Locking It Down (Resource Controllers and Authentication in Laravel)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+IT0049 Web System Technologies. A Laravel 12 point-of-sale (POS) application, continued from TFA7, where customer and user account management uses resource controllers and is only reachable by logged-in users.
 
-## About Laravel
+## What changed in TFA8
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Customer and user routes are each a single `Route::resource()` registration.
+- Both controllers use the seven conventional methods: `index`, `create`, `store`, `show`, `edit`, `update`, `destroy`.
+- Laravel Breeze (Blade) provides login, registration, password reset and profile pages, adapted to the `username` and `full_name` fields.
+- The `auth` middleware protects every customer and user account route.
+- The migrations now include the `email` and `password` columns needed for login.
+- Passwords are stored hashed, and you cannot delete the account you are logged in with from the user list.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Requirements
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP 8.2 or newer with the `gd`, `fileinfo`, `pdo_sqlite` and `zip` extensions
+- Composer
+- Node.js 20.19+ or 22.12+ and npm
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Setup
 
 ```bash
-composer require laravel/boost --dev
+git clone https://github.com/LordofCinder1/WEBSYS-TFA-8.git
+cd WEBSYS-TFA-8
 
-php artisan boost:install
+composer install
+cp .env.example .env        # Windows Command Prompt: copy .env.example .env
+php artisan key:generate
+
+php artisan migrate --seed  # answer "yes" if asked to create the SQLite database
+php artisan storage:link    # makes uploaded avatars visible
+
+npm install
+npm run build
+
+php artisan serve
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Open <http://localhost:8000>.
 
-## Contributing
+### Demo login
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+| Email | Password |
+| --- | --- |
+| `alice@example.com` | `password` |
 
-## Code of Conduct
+All five seeded users share this password. It is for local testing only.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Using MySQL instead of SQLite
 
-## Security Vulnerabilities
+Create an empty database, set these values in `.env`, then run `php artisan migrate --seed`:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```ini
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=tfa8
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-## License
+> If you reuse an older TFA7 database, run `php artisan migrate:fresh --seed`. This **erases** its existing data.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Routes
+
+From [`routes/web.php`](routes/web.php):
+
+```php
+Route::middleware('auth')->group(function () {
+    Route::resource('customers', CustomerController::class);
+    Route::resource('users', UserController::class);
+    // profile routes
+});
+```
+
+| Method | URI (`users` follows the same pattern) | Controller method |
+| --- | --- | --- |
+| GET | `/customers` | `index` |
+| GET | `/customers/create` | `create` |
+| POST | `/customers` | `store` |
+| GET | `/customers/{customer}` | `show` |
+| GET | `/customers/{customer}/edit` | `edit` |
+| PUT/PATCH | `/customers/{customer}` | `update` |
+| DELETE | `/customers/{customer}` | `destroy` |
+
+## Access control check
+
+Requesting a protected page while logged out redirects to the login page:
+
+```text
+$ curl -i http://localhost:8000/customers
+HTTP/1.1 302 Found
+Location: http://localhost:8000/login
+```
+
+Automated tests cover the redirect on all 14 account routes, logged-in create/view/edit/delete, password hashing and the Breeze authentication flows:
+
+```bash
+php artisan test
+# Tests: 29 passed (123 assertions)
+```
+
+## Screenshots
+
+### Logged out
+
+**Home page**
+
+![Home page](screenshots/01-home.png)
+
+**Visiting `/customers` while logged out redirects to login**
+
+![Redirect to login](screenshots/02-guest-redirect-login.png)
+
+**Registration**
+
+![Register page](screenshots/03-register.png)
+
+### Logged in
+
+**Dashboard**
+
+![Dashboard](screenshots/04-dashboard.png)
+
+### Customer accounts
+
+**List**
+
+![Customer list](screenshots/05-customers.png)
+
+**Add**
+
+![Add customer](screenshots/06-add-customer.png)
+
+![Customer added](screenshots/07-customer-added.png)
+
+**View**
+
+![Customer details](screenshots/08-customer-details.png)
+
+**Edit**
+
+![Edit customer](screenshots/09-edit-customer.png)
+
+**Delete**
+
+![Customer deleted](screenshots/10-customer-deleted.png)
+
+### User accounts
+
+**List**
+
+![User list](screenshots/11-users.png)
+
+**Add**
+
+![Add user](screenshots/12-add-user.png)
+
+![User added](screenshots/13-user-added.png)
+
+### About page
+
+![About page](screenshots/14-about.png)

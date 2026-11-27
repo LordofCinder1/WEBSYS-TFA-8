@@ -9,7 +9,11 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
-                    {{ __("You're logged in!") }}
+                    <p>{{ __("You're logged in!") }}</p>
+                    <p class="mt-4 space-x-4">
+                        <a href="{{ route('customers.index') }}" class="underline text-indigo-600">Manage customer accounts</a>
+                        <a href="{{ route('users.index') }}" class="underline text-indigo-600">Manage user accounts</a>
+                    </p>
                 </div>
             </div>
         </div>
